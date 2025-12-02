@@ -2,7 +2,7 @@
 
 ## 1. Experiment Overview
 
-This experiment is based on the methodology from the paper **(Re-)Imag(in)ing Price Trends**, using Convolutional Neural Networks (CNN) to classify stock price images and predict the price movement direction over the next 20 days.
+This experiment is based on the methodology from the paper **(Re-)Imag(in)ing Price Trends**, using deep learning models to classify stock price images and predict the price movement direction over the next 20 days. We implemented and compared three different architectures: **Baseline CNN**, **Baseline Large CNN**, and **Vision Transformer (ViT)**.
 
 ---
 
@@ -35,21 +35,39 @@ This experiment is based on the methodology from the paper **(Re-)Imag(in)ing Pr
 
 ---
 
-## 4. Model Architecture
+## 4. Model Architecture Comparison
 
-### Baseline CNN
+### 4.1 Model Parameters
+
+| Model | Parameters | Description |
+|-------|------------|-------------|
+| **Baseline** | 708,866 (0.71M) | 3-layer CNN + FC |
+| **Baseline Large** | 10,233,602 (10.23M) | CNN with expanded channels |
+| **ViT** | 10,821,314 (10.82M) | Vision Transformer |
+
+### 4.2 Baseline CNN Architecture
 
 | Layer | Output Channels | Kernel | Stride | Dilation | Padding | Activation |
 |-------|-----------------|--------|--------|----------|---------|------------|
 | Conv2d + BN + LeakyReLU + MaxPool | 64 | (5,3) | (3,1) | (2,1) | (12,1) | LeakyReLU(0.01) |
 | Conv2d + BN + LeakyReLU + MaxPool | 128 | (5,3) | (3,1) | (2,1) | (12,1) | LeakyReLU(0.01) |
 | Conv2d + BN + LeakyReLU + MaxPool | 256 | (5,3) | (3,1) | (2,1) | (12,1) | LeakyReLU(0.01) |
-| Dropout + Linear | 2 | - | - | - | - | Softmax |
+| Dropout(0.5) + Linear | 2 | - | - | - | - | Softmax |
 
-| Model Statistics | Value |
-|------------------|-------|
-| Total Parameters | 708,866 (0.71M) |
-| FLOPs (per sample) | 289.76 GFLOPs |
+### 4.3 Baseline Large CNN Architecture
+
+Same structure as Baseline, but channels expanded from 64→128→256 to 96→192→384, with additional hidden layers.
+
+### 4.4 Vision Transformer Architecture
+
+| Configuration | Setting |
+|---------------|---------|
+| Patch Size | 4×4 |
+| Embedding Dim | 384 |
+| Transformer Depth | 6 |
+| Attention Heads | 6 |
+| MLP Ratio | 4 |
+| Dropout | 0.1 |
 
 ---
 
@@ -63,143 +81,125 @@ This experiment is based on the methodology from the paper **(Re-)Imag(in)ing Pr
 | Learning Rate | 1e-5 |
 | Loss Function | CrossEntropyLoss |
 | Max Epochs | 100 |
+| Early Stopping | Patience = 10 epochs |
 | Weight Initialization | Xavier Uniform |
 | Random Seed | 42 |
 
 ---
 
-## 6. Early Stopping Comparison Experiments
+## 6. Training Results Summary
 
-### Experiment Settings
+### 6.1 Three-Model Comparison
 
-| Experiment Name | Early Stopping Patience |
-|-----------------|-------------------------|
-| baseline-earlystop-5 | 5 epochs |
-| baseline-earlystop-10 | 10 epochs |
+| Model | Parameters | Best Epoch | Best Val Loss | Total Epochs |
+|-------|------------|------------|---------------|--------------|
+| **Baseline** | 0.71M | 18 | 0.687114 | 29 |
+| **Baseline Large** | 10.23M | 26 | **0.686382** | 37 |
+| **ViT** | 10.82M | 7 | 0.691686 | 18 |
 
-### Training Results Comparison
+### 6.2 Key Findings
 
-| Experiment | Best Epoch | Best Train Loss | Best Val Loss | Total Training Epochs |
-|------------|------------|-----------------|---------------|----------------------|
-| earlystop-5 | 19 | 0.7014 | **0.6867** | 25 |
-| earlystop-10 | 24 | 0.6939 | 0.6873 | 30 |
+1. **Baseline Large performs best**: Despite 14x more parameters, Val Loss only slightly decreased (0.687 → 0.686).
+2. **ViT underperforms**: Vision Transformer struggles to converge on this task, Val Loss stagnates around 0.692.
+3. **Baseline is most cost-effective**: Achieves near-best performance with only 0.71M parameters.
 
 ---
 
-## 7. Training Process Details (earlystop-10)
+## 7. Training Process Details
 
-### Per-Epoch Training Log
+### 7.1 Baseline Training Log
 
-| Epoch | Train Loss | Val Loss | Train Time | Val Time | Note |
-|-------|------------|----------|------------|----------|------|
-| 0 | 1.0283 | 0.7169 | ~24s | ~7s | |
-| 1 | 0.8808 | 0.7014 | ~21s | ~6s | |
-| 2 | 0.8233 | 0.6958 | ~18s | ~6s | |
-| 3 | 0.7951 | 0.6938 | ~18s | ~6s | |
-| 4 | 0.7750 | 0.6955 | ~18s | ~6s | |
-| 5 | 0.7629 | 0.6926 | ~18s | ~6s | |
-| 6 | 0.7521 | 0.7139 | ~18s | ~6s | |
-| 7 | 0.7446 | 0.6990 | ~17s | ~6s | |
-| 8 | 0.7372 | 0.6919 | ~17s | ~6s | |
-| 9 | 0.7309 | 0.6902 | ~18s | ~6s | |
-| 10 | 0.7266 | 0.6900 | ~18s | ~6s | |
-| 11 | 0.7227 | 0.6921 | ~17s | ~6s | |
-| 12 | 0.7185 | 0.6976 | ~18s | ~6s | |
-| 13 | 0.7152 | 0.6899 | ~17s | ~5s | |
-| 14 | 0.7121 | 0.6947 | ~17s | ~6s | |
-| 15 | 0.7098 | 0.6961 | ~39s | ~6s | |
-| 16 | 0.7077 | 0.6883 | ~18s | ~6s | |
-| 17 | 0.7051 | 0.6874 | ~17s | ~6s | |
-| 18 | 0.7028 | 0.6898 | ~18s | ~6s | |
-| 19 | 0.7014 | **0.6867** | ~17s | ~6s | ⭐ Best |
-| 20 | 0.6994 | 0.6928 | ~17s | ~5s | |
-| 21 | 0.6975 | 0.6949 | ~17s | ~6s | |
-| 22 | 0.6961 | 0.6881 | ~18s | ~6s | |
-| 23 | 0.6949 | 0.6903 | ~18s | ~6s | |
-| 24 | 0.6939 | 0.6873 | ~18s | ~6s | |
-| 25 | 0.6925 | 0.7009 | ~18s | ~6s | |
-| 26 | 0.6915 | 0.6887 | ~18s | ~5s | |
-| 27 | 0.6901 | 0.6931 | ~17s | ~6s | |
-| 28 | 0.6893 | 0.6874 | ~17s | ~6s | |
-| 29 | 0.6881 | 0.6882 | ~17s | ~6s | Early Stop |
+| Epoch | Train Loss | Val Loss | Note |
+|-------|-----------|----------|------|
+| 0 | 1.0229 | 0.7226 | |
+| 5 | 0.7600 | 0.6908 | |
+| 10 | 0.7260 | 0.7013 | |
+| 15 | 0.7098 | 0.6893 | |
+| 18 | 0.7032 | **0.6871** | ⭐ Best |
+| 28 | 0.6897 | 0.6917 | Early Stop |
+
+### 7.2 Baseline Large Training Log
+
+| Epoch | Train Loss | Val Loss | Note |
+|-------|-----------|----------|------|
+| 0 | 0.9485 | 0.7182 | |
+| 10 | 0.7109 | 0.6896 | |
+| 20 | 0.6842 | 0.6882 | |
+| 26 | 0.6761 | **0.6864** | ⭐ Best |
+| 36 | 0.6727 | 0.6906 | Early Stop |
+
+### 7.3 ViT Training Log
+
+| Epoch | Train Loss | Val Loss | Note |
+|-------|-----------|----------|------|
+| 0 | 0.7023 | 0.6979 | |
+| 7 | 0.6935 | **0.6917** | ⭐ Best |
+| 17 | 0.6927 | 0.6928 | Early Stop |
 
 ---
 
 ## 8. Training Efficiency Statistics
 
-| Metric | Value |
-|--------|-------|
-| Training Steps per Epoch | 543 steps |
-| Validation Steps per Epoch | 233 steps |
-| Training Speed | ~29-30 it/s |
-| Validation Speed | ~35-36 it/s |
-| Single Epoch Training Time | ~17-24 seconds |
-| Single Epoch Validation Time | ~6-7 seconds |
-| Total Training Time (30 epochs) | ~12 minutes |
+| Metric | Baseline | Baseline Large | ViT |
+|--------|----------|----------------|-----|
+| Training Steps per Epoch | 543 | 543 | 543 |
+| Validation Steps per Epoch | 233 | 233 | 233 |
+| Training Speed | ~30 it/s | ~25 it/s | ~15 it/s |
+| Time per Epoch | ~25s | ~35s | ~55s |
+| Total Training Time | ~12 min | ~22 min | ~17 min |
 
 ---
 
-## 9. Best Model
+## 9. Model Checkpoints
 
-| Item | Value |
-|------|-------|
-| Best Model Path | `pt/baseline-earlystop-5/best_baseline_epoch_19_train_0.701418_val_0.686740.pt` |
-| Best Epoch | 19 |
-| Train Loss | 0.7014 |
-| Val Loss | 0.6867 |
-
----
-
-## 10. Key Observations
-
-1. **Overfitting Trend**: Train Loss continues to decrease, but Val Loss plateaus after Epoch 19 with slight fluctuations, indicating the model begins to overfit.
-
-2. **Early Stopping Effect**: Early Stopping with Patience=5 and 10 achieve similar final results, but Patience=5 terminates training earlier, saving computational resources.
-
-3. **Convergence Speed**: The model converges rapidly in the first 10 epochs, then enters a slow optimization phase.
-
-4. **GPU Utilization**: Using 8-GPU DataParallel with effective Batch Size of 1024 significantly accelerates the training process.
+| Model | Best Model Path |
+|-------|-----------------|
+| Baseline | `pt/baseline/best.pt` |
+| Baseline Large | `pt/baseline_large/best.pt` |
+| ViT | `pt/vit/best.pt` |
 
 ---
 
-## 11. File Structure
+## 10. Training Curves
+
+Training comparison plot saved at: `pic/training_comparison.png`
+
+![Training Comparison](pic/training_comparison.png)
+
+---
+
+## 11. Conclusions
+
+1. **CNN architecture is more suitable for this task**: Traditional CNNs outperform Vision Transformer on stock image classification.
+
+2. **Parameters don't correlate with performance**: Baseline Large has 14x more parameters than Baseline, but Val Loss only decreased by 0.1%.
+
+3. **Early stopping is effective**: All models triggered early stopping at appropriate times, avoiding overfitting.
+
+4. **Recommend using Baseline**: Considering training efficiency and model size, Baseline is the best choice.
+
+---
+
+## 12. File Structure
 
 ```
 Stock_CNN/
 ├── notebooks/
-│   ├── train.ipynb          # Training script
-│   └── test.ipynb           # Testing script
+│   └── train.ipynb              # Training script
 ├── models/
-│   ├── baseline.py          # Baseline CNN model
-│   ├── baseline_large.py    # Large CNN model
-│   └── vit.py               # Vision Transformer model
+│   ├── baseline.py              # Baseline CNN
+│   ├── baseline_large.py        # Baseline Large CNN
+│   └── vit.py                   # Vision Transformer
 ├── pt/
-│   ├── baseline-earlystop-5/   # Patience=5 experiment results
-│   └── baseline-earlystop-10/  # Patience=10 experiment results
-├── data/
-│   └── monthly_20d/         # Data directory
-└── runs/                    # TensorBoard logs
-```
-
----
-
-## 12. Reproduction Commands
-
-```bash
-# 1. Create environment
-conda create -n Math5470 python=3.10
-conda activate Math5470
-pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu126
-pip install -r requirements.txt
-
-# 2. Launch TensorBoard monitoring
-tensorboard --logdir=runs
-
-# 3. Run training notebook
-jupyter notebook notebooks/train.ipynb
+│   ├── baseline/best.pt         # Baseline best model
+│   ├── baseline_large/best.pt   # Baseline Large best model
+│   ├── vit/best.pt              # ViT best model
+│   └── training_results.json    # Training results JSON
+├── runs/                        # TensorBoard logs
+└── pic/
+    └── training_comparison.png  # Training comparison plot
 ```
 
 ---
 
 *Report Generated: 2025-12-02*
-

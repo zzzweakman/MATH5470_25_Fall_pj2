@@ -2,7 +2,7 @@
 
 ## 1. Test Overview
 
-This test performs out-of-sample backtesting on the trained CNN model to evaluate its performance as a stock selection strategy for actual investment.
+This test evaluates three trained models (Baseline, Baseline Large, ViT) through out-of-sample backtesting to assess their performance as stock selection strategies. The test data covers 2001-2019, spanning 19 years of market data.
 
 ---
 
@@ -25,157 +25,159 @@ This test performs out-of-sample backtesting on the trained CNN model to evaluat
 | Image Size | 64 × 60 (H × W) |
 | Label | Binary Classification (Ret_20d > 0) |
 
-### 2.3 Model Used
+### 2.3 Strategy Parameters
 
-| Configuration | Setting |
-|---------------|---------|
-| Model Path | `pt/baseline-earlystop-5/best_baseline_epoch_19_train_0.701418_val_0.686740.pt` |
-| Model Type | Baseline CNN |
-| Training Epoch | 19 |
-| Training Val Loss | 0.6867 |
+| Parameter | Setting |
+|-----------|---------|
+| Selection Threshold | 0.58 |
+| Holding Period | 20 trading days |
 
 ---
 
-## 3. Model Inference Results
+## 3. Test Models
 
-| Metric | Value |
-|--------|-------|
-| Test Loss | 0.694 |
-| Inference Steps | 686 steps |
-| Inference Speed | ~13.30 it/s |
-| Total Inference Time | ~51 seconds |
+| Model | Parameters | Model Path | Training Val Loss |
+|-------|------------|------------|-------------------|
+| Baseline | 0.71M | `pt/baseline/best.pt` | 0.6871 |
+| Baseline Large | 10.23M | `pt/baseline_large/best.pt` | 0.6864 |
+| ViT | 10.82M | `pt/vit/best.pt` | 0.6917 |
 
 ---
 
-## 4. Backtesting Strategy Design
+## 4. Test Results Summary
 
-### 4.1 Strategy Description
+### 4.1 Model Performance Comparison
+
+| Model | Test Loss | Accuracy | Selection % | Cum Return | Excess Return |
+|-------|-----------|----------|-------------|------------|---------------|
+| **Baseline** | 0.6942 | 51.58% | 1.85% | **19.86x** | **+16.68** |
+| **Baseline Large** | 0.6926 | 52.10% | 4.47% | 17.11x | +13.93 |
+| **ViT** | 0.6935 | 49.84% | 0.00% | 1.00x | -2.18 |
+| Baseline (Buy All) | - | - | 100% | 3.18x | 0 |
+
+### 4.2 Key Findings
+
+1. **Baseline model performs best**:
+   - Cumulative return reaches **19.86x**, excess return **+16.68**
+   - Only selects 1.85% of stocks, yet significantly outperforms the buy-all baseline
+
+2. **Baseline Large performs well**:
+   - Cumulative return 17.11x, excess return +13.93
+   - Higher selection ratio (4.47%), better diversification
+
+3. **ViT underperforms**:
+   - Prediction probability distribution too conservative, no stocks selected at 0.58 threshold
+   - Model failed to learn useful features effectively
+
+---
+
+## 5. Strategy Details
+
+### 5.1 Strategy Description
 
 The model outputs the probability of each stock-date sample rising in the next 20 days (`predict_logit`), based on which investment strategies are constructed:
 
 | Strategy | Description |
 |----------|-------------|
-| **Baseline** | Buy all stocks (threshold = 0), equal weight |
-| **CNN Strategy** | Only buy stocks with `predict_logit > 0.58` |
+| **Baseline (Buy All)** | Buy all stocks, equal weight |
+| **Model Strategy** | Only buy stocks with `predict_logit > 0.58` |
 
-### 4.2 Weighting Schemes
+### 5.2 Selection Statistics
 
-| Weighting Scheme | Description |
-|------------------|-------------|
-| **Equal Weighted (Same Weighted)** | Allocate equal weight to each selected stock |
-| **Volatility Weighted (EWMA_Vol Weighted)** | Allocate weight based on EWMA volatility |
-
----
-
-## 5. Backtesting Results
-
-### 5.1 Strategy Parameters
-
-| Parameter | Setting |
-|-----------|---------|
-| Stock Selection Threshold | 0.58 |
-| Backtesting Period | 2001-2019 (~19 years) |
-| Holding Period | 20 trading days |
-
-### 5.2 Equal Weight Strategy Comparison
-
-| Strategy | Description |
-|----------|-------------|
-| Baseline | Buy all stocks monthly, calculate average return |
-| CNN | Only buy stocks with model prediction probability > 58% |
-| Exceed Return | Excess return of CNN strategy over Baseline |
-
-### 5.3 Volatility Weighted Strategy
-
-| Strategy | Weight Calculation |
-|----------|-------------------|
-| Baseline | `weight = EWMA_vol` |
-| CNN | `weight = (predict_logit > 0.58) × EWMA_vol` |
+| Model | Total Samples | Selected Stocks | Selection % |
+|-------|---------------|-----------------|-------------|
+| Baseline | 1,403,975 | 25,922 | 1.85% |
+| Baseline Large | 1,403,975 | 62,823 | 4.47% |
+| ViT | 1,403,975 | 0 | 0.00% |
 
 ---
 
-## 6. Visualization Output
+## 6. Return Analysis
 
-### 6.1 Generated Charts
+### 6.1 Cumulative Return Comparison
+
+| Strategy | 2001-2019 Cumulative Return |
+|----------|----------------------------|
+| Baseline (Buy All) | 3.18x |
+| Baseline Selection Strategy | **19.86x** |
+| Baseline Large Selection Strategy | 17.11x |
+| ViT Selection Strategy | 1.00x |
+
+### 6.2 Annualized Return Estimate
+
+Assuming 19-year investment period:
+
+| Strategy | Cumulative Return | Annualized Return |
+|----------|-------------------|-------------------|
+| Baseline (Buy All) | 3.18x | ~6.3% |
+| Baseline Selection Strategy | 19.86x | ~17.1% |
+| Baseline Large Selection Strategy | 17.11x | ~16.2% |
+
+---
+
+## 7. Visualization Output
+
+### 7.1 Generated Charts
 
 | Chart File | Description |
 |------------|-------------|
-| `pic/performance1.png` | Log cumulative return comparison (Baseline vs CNN vs Excess Return) |
-| `pic/performance2.png` | CNN strategy cumulative return curve |
+| `pic/test_comparison.png` | Multi-model test results comparison (4 subplots) |
+| `pic/stocks_selected.png` | Number of selected stocks over time |
 
-### 6.2 Chart Content Description
+### 7.2 Chart Contents
 
-**performance1.png** contains three curves:
-- `baseline`: Log cumulative return of buying all stocks
-- `CNN`: Log cumulative return of CNN stock selection strategy
-- `exceed_ret`: Excess return (CNN - Baseline)
+**test_comparison.png** contains:
+1. Cumulative return comparison (all models vs Baseline)
+2. Log cumulative return comparison
+3. Excess return curves
+4. Test Loss and Accuracy bar chart
 
-**performance2.png** shows:
-- Raw cumulative return of CNN strategy (non-logarithmic)
-
----
-
-## 7. Key Code Logic
-
-### 7.1 Model Inference
-
-```python
-# Load model
-net = torch.load(net_path, weights_only=False)
-
-# Inference to get prediction probabilities
-test_loss, y_pred, y_target = eval_loop(test_dataloader, net, loss_fn)
-predict_logit = (torch.nn.Softmax(dim=1)(y_pred)[:,1]).cpu().numpy()
-```
-
-### 7.2 Strategy Construction
-
-```python
-# Baseline: Buy all stocks
-threshold = 0.
-ret_baseline = label_df.groupby(['Date'])['Ret_20d'].mean()
-
-# CNN Strategy: Only buy high probability stocks
-threshold = 0.58
-label_filtered = label_df[predict_logit > threshold]
-ret_cnn = label_filtered.groupby(['Date'])['Ret_20d'].mean()
-```
-
-### 7.3 Return Calculation
-
-```python
-# Log cumulative return
-log_ret_baseline = np.log10((ret_baseline+1).cumprod().ffill())
-log_ret_cnn = np.log10((ret_cnn+1).cumprod().ffill())
-
-# Excess return
-exceed_ret = log_ret_cnn - log_ret_baseline
-```
+**stocks_selected.png** shows:
+- Number of stocks selected by each model at different time points
 
 ---
 
-## 8. Data Field Description
+## 8. Best Model Analysis
 
-The test data contains the following label fields:
+### 8.1 Baseline Model
 
-| Field Name | Description |
-|------------|-------------|
-| Date | Date |
-| Ret_20d | Return over next 20 days |
-| EWMA_vol | Exponentially Weighted Moving Average Volatility |
-| Other fields | See `label_columns.txt` for details |
+| Metric | Value |
+|--------|-------|
+| Model Type | 3-layer CNN |
+| Parameters | 708,866 (0.71M) |
+| Test Loss | 0.6942 |
+| Accuracy | 51.58% |
+| Selection Threshold | 0.58 |
+| Selected Stocks | 25,922 (1.85%) |
+| Cumulative Return | 19.86x |
+| Excess Return | +16.68 |
+
+### 8.2 Why is Baseline the Best?
+
+1. **Precise stock selection**: Only selects 1.85% high-confidence stocks
+2. **Avoids noise**: Smaller model is less prone to overfitting
+3. **Strong generalization**: Stable performance on 19 years of out-of-sample data
 
 ---
 
-## 9. Test Conclusions
+## 9. Conclusions & Recommendations
 
-1. **Out-of-Sample Performance**: The model achieves a Loss of 0.694 on the 2001-2019 test set, close to the validation Loss (0.687), indicating good generalization ability.
+### 9.1 Conclusions
 
-2. **Stock Selection Threshold**: Using 0.58 as the selection threshold to filter stocks that the model considers "high probability of rising".
+1. **CNN models are effective**: Both Baseline and Baseline Large generate significant excess returns.
 
-3. **Strategy Effectiveness**: By comparing the cumulative return curves of CNN strategy and Baseline, we can evaluate the stock selection capability of the CNN model.
+2. **Model complexity is not key**: The simplest Baseline model actually performs best.
 
-4. **Backtesting Period**: Covering 19 years of market data, including multiple bull and bear cycles, the test results have statistical significance.
+3. **ViT is not suitable for this task**: Vision Transformer underperforms on stock image classification.
+
+4. **Threshold selection matters**: 0.58 threshold works well for Baseline but is too strict for ViT.
+
+### 9.2 Recommendations
+
+1. **Recommend using Baseline model in production**
+2. **Try different thresholds for sensitivity analysis**
+3. **Consider adding transaction costs and slippage effects**
+4. **Recommend more out-of-sample testing**
 
 ---
 
@@ -183,23 +185,24 @@ The test data contains the following label fields:
 
 | Output File | Path |
 |-------------|------|
-| Return Comparison Chart | `pic/performance1.png` |
-| CNN Cumulative Return Chart | `pic/performance2.png` |
+| Test Results JSON | `pt/test_results.json` |
+| Test Comparison Plot | `pic/test_comparison.png` |
+| Stock Selection Plot | `pic/stocks_selected.png` |
 
 ---
 
 ## 11. Reproduction Steps
 
 ```bash
-# 1. Ensure training is completed and best model is obtained
+# 1. Ensure training is completed
 # 2. Run test notebook
-jupyter notebook notebooks/test.ipynb
+cd notebooks
+jupyter notebook test.ipynb
 
 # 3. View generated charts
-ls pic/
+ls ../pic/
 ```
 
 ---
 
 *Report Generated: 2025-12-02*
-
