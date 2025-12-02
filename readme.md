@@ -22,12 +22,12 @@ Re-Implementation Authors:  Gongye Liu, Zixuan Ye, Yatian Wang, Haoqiang Guo, Zh
 
 ### Test Results (Backtesting 2001-2019)
 
-| Model | Test Loss | Accuracy | Selection % | Cumulative Return | Excess Return |
-|-------|-----------|----------|-------------|-------------------|---------------|
-| **Baseline** | 0.6942 | 51.58% | 1.85% | **19.86x** | **+16.68** |
-| **Baseline Large** | 0.6926 | 52.10% | 4.47% | 17.11x | +13.93 |
-| **ViT** | 0.6935 | 49.84% | 0.00% | 1.00x | -2.18 |
-| Buy All (Baseline) | - | - | 100% | 3.18x | 0 |
+| Model | Threshold | Test Loss | Accuracy | Selection % | Cumulative Return | Excess Return |
+|-------|-----------|-----------|----------|-------------|-------------------|---------------|
+| **Baseline** | 0.58 | 0.6942 | 51.58% | 1.85% | **19.86x** | **+16.68** |
+| **Baseline Large** | 0.58 | 0.6926 | 52.10% | 4.47% | 17.11x | +13.93 |
+| **ViT** | 0.50 | 0.6935 | 49.84% | 23.27% | 2.84x | -0.34 |
+| Buy All (Benchmark) | - | - | - | 100% | 3.18x | 0 |
 
 ### Key Findings
 
@@ -91,8 +91,8 @@ tensorboard --logdir=runs
 **Training Configuration:**
 - Models: Baseline CNN, Baseline Large CNN, Vision Transformer
 - Optimizer: Adam (lr=1e-5)
-- Batch Size: 1024 (128 × 8 GPUs)
-- Early Stopping: Patience = 10 epochs
+- Batch Size: 512 (256 × 2 GPUs)
+- Early Stopping: Patience = 5 epochs
 
 📄 For detailed training results, see:
 - [TRAINING_REPORT.md](./TRAINING_REPORT.md) (中文)
