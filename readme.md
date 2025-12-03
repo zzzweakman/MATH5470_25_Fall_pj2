@@ -122,34 +122,86 @@ The test notebook will:
 
 ---
 
+### 📈 Regression Task (New!)
+
+In addition to the classification task, we also implemented a **regression task** that directly predicts stock returns.
+
+#### Training Regression Model
+
+```bash
+cd notebooks
+jupyter notebook train_regression.ipynb
+```
+
+**Regression Configuration:**
+- Target: `Ret_5d` (5-day future return)
+- Loss Function: MSELoss
+- Output: Single scalar (predicted return)
+
+#### Testing Regression Model
+
+```bash
+cd notebooks
+jupyter notebook test_regression.ipynb
+```
+
+**Backtesting Strategy:**
+- Buy stocks with predicted return > 1%
+- Hold for 5 days (implicit sell)
+- Compare with baseline (buy all stocks)
+
+#### Classification vs Regression
+
+| Comparison | Classification | Regression |
+|------------|----------------|------------|
+| Target | Direction (0/1) | Return value |
+| Loss | CrossEntropyLoss | MSELoss |
+| Output | 2 neurons + Softmax | 1 neuron |
+| Selection | Probability > 0.58 | Predicted return > 1% |
+| Holding Period | 20 days | 5 days |
+
+📄 For detailed regression results, see:
+- [Regression_REPORT.md](./Regression_REPORT.md) (中文)
+- [Regression_REPORT_EN.md](./Regression_REPORT_EN.md) (English)
+
+---
+
 ## 📁 Project Structure
 
 ```
 Stock_CNN/
 ├── notebooks/
-│   ├── train.ipynb              # Training script (all 3 models)
-│   └── test.ipynb               # Testing & backtesting script
+│   ├── train.ipynb              # Classification training (all 3 models)
+│   ├── test.ipynb               # Classification testing & backtesting
+│   ├── train_regression.ipynb   # Regression training
+│   └── test_regression.ipynb    # Regression testing & backtesting
 ├── models/
-│   ├── baseline.py              # Baseline CNN (0.71M params)
-│   ├── baseline_large.py        # Large CNN (10.23M params)
-│   └── vit.py                   # Vision Transformer (10.82M params)
+│   ├── baseline.py              # Baseline CNN for classification (0.71M)
+│   ├── baseline_large.py        # Large CNN for classification (10.23M)
+│   ├── baseline_regression.py   # Baseline CNN for regression (0.73M)
+│   └── vit.py                   # Vision Transformer (10.82M)
 ├── data/
 │   └── monthly_20d/             # Stock image data
 ├── pt/
-│   ├── baseline/best.pt         # Best Baseline model
-│   ├── baseline_large/best.pt   # Best Baseline Large model
+│   ├── baseline/best.pt         # Best classification model
+│   ├── baseline_large/best.pt   # Best large classification model
 │   ├── vit/best.pt              # Best ViT model
-│   ├── training_results.json    # Training results
-│   └── test_results.json        # Test results
+│   ├── regression_baseline_*/   # Regression model checkpoints
+│   ├── training_results.json    # Classification training results
+│   └── test_results.json        # Classification test results
 ├── pic/
-│   ├── training_comparison.png  # Training curves comparison
-│   ├── test_comparison.png      # Test results comparison
-│   └── stocks_selected.png      # Stock selection over time
+│   ├── training_comparison.png  # Classification training curves
+│   ├── test_comparison.png      # Classification test results
+│   ├── stocks_selected.png      # Stock selection over time
+│   ├── test_regression_comparison.png   # Regression backtest
+│   └── test_regression_thresholds.png   # Threshold analysis
 ├── runs/                        # TensorBoard logs
-├── TRAINING_REPORT.md           # Training report (Chinese)
-├── TRAINING_REPORT_EN.md        # Training report (English)
-├── TEST_REPORT.md               # Test report (Chinese)
-├── TEST_REPORT_EN.md            # Test report (English)
+├── TRAINING_REPORT.md           # Classification training report (Chinese)
+├── TRAINING_REPORT_EN.md        # Classification training report (English)
+├── TEST_REPORT.md               # Classification test report (Chinese)
+├── TEST_REPORT_EN.md            # Classification test report (English)
+├── Regression_REPORT.md         # Regression report (Chinese)
+├── Regression_REPORT_EN.md      # Regression report (English)
 └── requirements.txt             # Python dependencies
 ```
 
@@ -157,20 +209,34 @@ Stock_CNN/
 
 ## 📊 Model Architectures
 
-### Baseline CNN (Recommended)
+### Classification Models
+
+#### Baseline CNN (Recommended)
 - 3-layer ConvNet with BatchNorm and LeakyReLU
 - Parameters: 708,866 (0.71M)
+- Output: 2 classes (up/down)
 - Best for: Production use, fast inference
 
-### Baseline Large CNN
+#### Baseline Large CNN
 - Same architecture with expanded channels (96→192→384)
 - Parameters: 10,233,602 (10.23M)
+- Output: 2 classes (up/down)
 - Best for: When more model capacity is needed
 
-### Vision Transformer (ViT)
+#### Vision Transformer (ViT)
 - Patch-based transformer with 6 layers
 - Parameters: 10,821,314 (10.82M)
+- Output: 2 classes (up/down)
 - Note: Underperforms on this task
+
+### Regression Models
+
+#### Baseline Regression CNN
+- Same CNN backbone as classification
+- Additional MLP head: 46080 → 512 → 64 → 1
+- Parameters: ~730,000 (0.73M)
+- Output: Single scalar (predicted return)
+- Loss: MSELoss
 
 ---
 
